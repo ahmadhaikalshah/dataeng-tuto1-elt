@@ -38,7 +38,7 @@ services:
       - destination_postgres
 
   dbt:
-    image: ghrc.io/dbt-labs/dbt-postgres:1.4.7
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
     command: [
       "run",
       "--profiles-dir",
