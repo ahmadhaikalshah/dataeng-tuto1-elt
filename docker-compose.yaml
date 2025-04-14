@@ -50,11 +50,11 @@ services:
       - elt_network
     volumes:
       - ./custom_postgres:/dbt
-      - ~/.dbt/:/root
+      - ~/.dbt:/root
     depends_on:
       - elt_script
     environment:
-      DBT_PROFILE: default
+      DBT_PROFILE: custom_postgres
       DBT_TARGET: dev
 
 networks:
