@@ -20,11 +20,11 @@ Third: Setup dbt
     2 - fill out the prompt according to profiles.yml below
 
 
-//////////////////////
-//                  //
+//////////////////////////
+//                  	//
 //	profiles.yml    //  -> C:\Users\<user>\.dbt\
-//                  //
-//////////////////////
+//                  	//
+//////////////////////////
 custom_postgres:
   outputs:
     dev:
@@ -37,3 +37,36 @@ custom_postgres:
       type: postgres
       user: postgres
   target: dev
+
+
+//////////////////////////////////////////////////
+//						//
+//	How to SAFELY start/stop project	//
+//						//
+//////////////////////////////////////////////////
+
+START: $ docker compose up -d
+
+STOP: $ docker compose down
+
+
+//////////////////////////////////////////////////////////////////
+//								//
+//	  How to stop project & delete related resources	//
+//								//
+//////////////////////////////////////////////////////////////////
+
+# Prune everything (safely)
+- $ docker system prune
+
+# Prune everything including unused images & volumes
+- $ docker system prune -a --volumes
+
+# Clean only build cache
+- $ docker builder prune
+
+# clean all build cache (even if in use)
+- $ docker builder prune --all
+
+# Remove dangling images (unused image layers that are not tagged or associated with any container. They're like leftovers from previous builds or image updates.)
+- $ docker image prune

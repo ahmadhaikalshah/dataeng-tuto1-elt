@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   
   source_postgres:
@@ -13,6 +11,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
     volumes:
+      - source_db_data:/var/lib/postgresql/data
       - ./source_db_init/init.sql/:/docker-entrypoint-initdb.d/init.sql
 
   destination_postgres:
@@ -25,12 +24,13 @@ services:
       POSTGRES_DB: destination_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
+    volumes:
+      - destination_db_data:/var/lib/postgresql/data
   
   elt_script:
     build:
       context: ./elt
       dockerfile: Dockerfile
-    command: [ "python", "elt_script.py" ]
     networks:
       - elt_network
     depends_on:
@@ -52,7 +52,8 @@ services:
       - ./custom_postgres:/dbt
       - ~/.dbt:/root
     depends_on:
-      - elt_script
+      elt_script:
+        condition: service_completed_successfully
     environment:
       DBT_PROFILE: custom_postgres
       DBT_TARGET: dev
@@ -60,3 +61,7 @@ services:
 networks:
   elt_network:
     driver: bridge
+
+volumes:
+  source_db_data:
+  destination_db_data:
