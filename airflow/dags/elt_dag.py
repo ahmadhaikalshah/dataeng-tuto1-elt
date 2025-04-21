@@ -1,4 +1,5 @@
 from datetime import datetime
+from os import getenv
 from subprocess import run
 
 from docker.types import Mount
@@ -12,16 +13,21 @@ from airflow.providers.docker.operators.docker import DockerOperator
 
 
 default_args = {
-    'owner', 'airflow',
-    'depends_on_past', False,
-    'email_on_failure', False,
-    'email_on_entry', False
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'email_on_failure': False,
+    'email_on_entry': False
 }
+
+
+hostname = getenv('HOSTNAME')
+port_no = int(getenv('PORT_NO'))
+elt_dir = getenv('ELT_DIR')
 
 
 def run_elt_script():
     result = run(
-        ['python', '/opt/airflow/elt/elt_script.py'],
+        [ 'python', f'{elt_dir}/elt_script.py' ],
         capture_output = True,
         text = True
         )
@@ -41,10 +47,15 @@ dag = DAG(
 )
 
 
-t1 = PythonOperator(
+# t1 = PythonOperator(
+#     task_id = 'run_elt_script',
+#     python_callable = run_elt_script,
+#     dag = dag
+# )
+t1 = BashOperator(
     task_id = 'run_elt_script',
-    python_callable = run_elt_script,
-    day = dag
+    bash_command = f'{elt_dir}/start.sh',
+    dag = dag
 )
 
 
@@ -52,14 +63,14 @@ t2 = DockerOperator(
     task_id = 'dbt_run',
     image = 'ghcr.io/dbt-labs/dbt-postgres:1.9.latest',
     entrypoint = '/bin/sh',
-    command = """
+    command = f"""
         -c '
         echo "Installing bash and curl...";
         apt-get update;
         apt-get install bash;
         apt-get install -y curl;
         echo "Waiting for ELT script to complete...";
-        until curl --silent --fail ${ELT_HOSTNAME}:${PORT_NO}; do
+        until curl --silent --fail http://{hostname}:{port_no}; do
             echo "Still waiting...";
             sleep 2;
         done;
@@ -71,13 +82,8 @@ t2 = DockerOperator(
     docker_url = 'unix://var/run/docker.sock',
     network_mode = 'bridge',
     mounts = [
-        Mount(source = './custom_postgres',
-              target = '/dbt',
-              type= 'bind'),
-        Mount(source = '~/.dbt',
-              target = '/root',
-              type = 'bind'
-              )
+        Mount(source = './custom_postgres', target = '/dbt', type= 'bind'),
+        Mount(source = '~/.dbt', target = '/root', type = 'bind')
     ],
     dag = dag
 )
