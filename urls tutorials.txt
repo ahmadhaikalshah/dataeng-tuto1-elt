@@ -59,9 +59,6 @@ STOP: $ docker compose down
 # Prune everything (safely)
 - $ docker system prune
 
-# Prune everything including unused images & volumes
-- $ docker system prune -a --volumes
-
 # Clean only build cache
 - $ docker builder prune
 
@@ -70,3 +67,16 @@ STOP: $ docker compose down
 
 # Remove dangling images (unused image layers that are not tagged or associated with any container. They're like leftovers from previous builds or image updates.)
 - $ docker image prune
+
+
+//////////////////////////////////////////////////
+//						//
+//	 Get 'AIRFLOW__CORE__FERNET_KEY'	//
+//						//
+//////////////////////////////////////////////////
+
+1 - Run this command
+$ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+2 - Copy the output and paste it in docker-compose.yaml file after 'AIRFLOW__CORE__FERNET_KEY='
+eg: 'AIRFLOW__CORE__FERNET_KEY=<paste the output here>'
