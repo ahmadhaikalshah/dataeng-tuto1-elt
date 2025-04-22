@@ -55,6 +55,11 @@ dag = DAG(
 t1 = BashOperator(
     task_id = 'run_elt_script',
     bash_command = f'/bin/bash {elt_dir}/start.sh',
+    env = {
+        'ELT_DIR': elt_dir,
+        'HOSTNAME': hostname,
+        'PORT_NO': port_no 
+    },
     dag = dag
 )
 
