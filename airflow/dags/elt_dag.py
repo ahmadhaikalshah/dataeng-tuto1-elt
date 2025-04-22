@@ -25,17 +25,17 @@ port_no = int(getenv('PORT_NO'))
 elt_dir = getenv('ELT_DIR')
 
 
-def run_elt_script():
-    result = run(
-        [ 'python', f'{elt_dir}/elt_script.py' ],
-        capture_output = True,
-        text = True
-        )
+# def run_elt_script():
+#     result = run(
+#         [ 'python', f'{elt_dir}/elt_script.py' ],
+#         capture_output = True,
+#         text = True
+#         )
     
-    if result.returncode != 0:
-        raise Exception(f'Script failed with error: {result.stderr}')
-    else:
-        print(result.stdout)
+#     if result.returncode != 0:
+#         raise Exception(f'Script failed with error: {result.stderr}')
+#     else:
+#         print(result.stdout)
 
 
 dag = DAG(
@@ -54,7 +54,7 @@ dag = DAG(
 # )
 t1 = BashOperator(
     task_id = 'run_elt_script',
-    bash_command = f'{elt_dir}/start.sh',
+    bash_command = f'/bin/bash {elt_dir}/start.sh',
     dag = dag
 )
 
