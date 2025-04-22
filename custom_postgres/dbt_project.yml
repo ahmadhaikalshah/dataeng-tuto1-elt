@@ -33,12 +33,4 @@ models:
   custom_postgres:
     # Config indicated by + and applies to all files under models/example/
     example:
-      films:
-      materialized: table
-    actors:
-      materialized: table
-    film_actors:
-      materialized: table
-      depends_on:
-        - model.example.films
-        - model.example.actors
+      +materialized: table
