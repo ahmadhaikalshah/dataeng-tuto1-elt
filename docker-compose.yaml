@@ -111,7 +111,7 @@ services:
     environment:
       - LOAD_EX=n
       - EXECUTOR=Local
-      - AIRFLOW__DATABASE_SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
       - AIRFLOW__CORE__FERNET_KEY=
       - AIRFLOW__WEBSERVER__DEFAULT__USER_USERNAME=airflow
       - AIRFLOW__WEBSERVER__DEFAULT__USER_PASSWORD=password
@@ -145,7 +145,7 @@ services:
     environment:
       - LOAD_EX=n
       - EXECUTOR=Local
-      - AIRFLOW__DATABASE_SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
       - AIRFLOW__CORE__FERNET_KEY=
       - AIRFLOW__WEBSERVER__DEFAULT__USER_USERNAME=airflow
       - AIRFLOW__WEBSERVER__DEFAULT__USER_PASSWORD=password
