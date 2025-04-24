@@ -74,22 +74,29 @@ services:
   airflow_postgres:
     image: postgres:15
     networks:
-      elt_network
+      - elt_network
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
   
   airflow_init:
-    image: apache/airflow:latest-python3.12
+    image: apache/airflow:2.9.3
     depends_on:
       - airflow_postgres
     networks:
       - elt_network
     environment:
-      - AIRFLOW__DATABASE_SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+      AIRFLOW__WEBSERVER__SECRET_KEY: secret
+    entrypoint: /bin/bash
     command: >
-      bash -c "airflow db init && airflow users create --username airflow --password password --firstname John --lastname Doe --role Admin --email admin@example.com"
+      -c "airflow db migrate && airflow users create --username airflow --firstname John --lastname Smith --role Admin --email johnsmith@example.com --password password"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
   
   airflow_webserver:
     build:
@@ -106,24 +113,26 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./elt:${ELT_AIRFLOW_DIR}
       - ./custom_postgres:/opt/dbt
-      - ~/.dbt:/root/dbt
+      - ~/.dbt:/root/.dbt
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - LOAD_EX=n
-      - EXECUTOR=Local
-      - AIRFLOW__DATABASE_SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
-      - AIRFLOW__CORE__FERNET_KEY=
-      - AIRFLOW__WEBSERVER__DEFAULT__USER_USERNAME=airflow
-      - AIRFLOW__WEBSERVER__DEFAULT__USER_PASSWORD=password
-      - AIRFLOW_WWW_USER_USERNAME=airflow
-      - AIRFLOW_WWW_USER_PASSWORD=password
-      - AIRFLOW__WEBSERVER__SECRET_KEY=secret
-      - ELT_DIR: ${ELT_AIRFLOW_DIR}
-      - HOSTNAME: ${ELT_HOSTNAME}
-      - PORT_NO: ${PORT_NO}
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+      AIRFLOW__WEBSERVER__SECRET_KEY: secret
+      AIRFLOW__WEBSERVER__RBAC: "True"
+      # _AIRFLOW_WWW_USER_CREATE: "True"
+      # _AIRFLOW_WWW_USER_USERNAME: airflow
+      # _AIRFLOW_WWW_USER_PASSWORD: password
+      # _AIRFLOW_WWW_USER_FIRSTNAME: John
+      # _AIRFLOW_WWW_USER_LASTNAME: Smith
+      # _AIRFLOW_WWW_USER_EMAIL: johnsmith@admin.com
+      ELT_DIR: ${ELT_AIRFLOW_DIR}
+      HOSTNAME: ${ELT_HOSTNAME}
+      PORT_NO: ${PORT_NO}
     ports:
-      - "${PORT_NO}:${PORT_NO}"
-    command: airflow_webserver
+      - "8080:8080"
+    entrypoint: /bin/bash
+    command: -c "airflow db migrate && airflow webserver"
   
   airflow_scheduler:
     build:
@@ -140,24 +149,21 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./elt:${ELT_AIRFLOW_DIR}
       - ./custom_postgres:/opt/dbt
-      - ~/.dbt:/root/dbt
+      - ~/.dbt:/root/.dbt
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - LOAD_EX=n
-      - EXECUTOR=Local
-      - AIRFLOW__DATABASE_SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
-      - AIRFLOW__CORE__FERNET_KEY=
-      - AIRFLOW__WEBSERVER__DEFAULT__USER_USERNAME=airflow
-      - AIRFLOW__WEBSERVER__DEFAULT__USER_PASSWORD=password
-      - AIRFLOW_WWW_USER_USERNAME=airflow
-      - AIRFLOW_WWW_USER_PASSWORD=password
-      - AIRFLOW__WEBSERVER__SECRET_KEY=secret
-      - ELT_DIR: ${ELT_AIRFLOW_DIR}
-      - HOSTNAME: ${ELT_HOSTNAME}
-      - PORT_NO: ${PORT_NO}
-    ports:
-      - "${PORT_NO}:${PORT_NO}"
-    command: airflow_scheduler
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+      AIRFLOW__WEBSERVER__SECRET_KEY: secret
+      AIRFLOW__WEBSERVER__RBAC: "True"
+      # AIRFLOW__API__AUTH_BACKEND: airflow.api.auth.backend.basic_auth
+      # _AIRFLOW_WWW_USER_USERNAME: airflow
+      # _AIRFLOW_WWW_USER_PASSWORD: password
+      ELT_DIR: ${ELT_AIRFLOW_DIR}
+      HOSTNAME: ${ELT_HOSTNAME}
+      PORT_NO: ${PORT_NO}
+    entrypoint: /bin/bash
+    command: -c "airflow db migrate && airflow scheduler"
 
 networks:
   elt_network:
@@ -166,3 +172,4 @@ networks:
 volumes:
   source_db_data:
   destination_db_data:
+  airflow_db_data:

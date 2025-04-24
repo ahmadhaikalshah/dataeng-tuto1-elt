@@ -31,9 +31,16 @@ custom_postgres:
   outputs:
     dev:
       dbname: destination_db
+
+      # For Windows/MacOS
       host: host.docker.internal
-      pass: secret
       port: 5434
+
+      # For linux-based OS (Ubuntu, etc...)
+      host: destination_postgres
+      port: 5432  # Use the 'destination_postgres' container's internal port
+
+      pass: secret
       schema: public
       threads: 1
       type: postgres

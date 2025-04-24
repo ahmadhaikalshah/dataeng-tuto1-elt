@@ -1,3 +1,3 @@
-FROM apache/airflow:latest-python3.12
+FROM apache/airflow:2.9.3
 
-RUN pip-install apache-airflow-providers-docker
+RUN pip install apache-airflow-providers-docker

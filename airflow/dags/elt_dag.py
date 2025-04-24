@@ -21,75 +21,67 @@ default_args = {
 
 
 hostname = getenv('HOSTNAME')
-port_no = int(getenv('PORT_NO'))
+port_no = getenv('PORT_NO')
 elt_dir = getenv('ELT_DIR')
 
 
-# def run_elt_script():
-#     result = run(
-#         [ 'python', f'{elt_dir}/elt_script.py' ],
-#         capture_output = True,
-#         text = True
-#         )
+def run_elt_script():
+    result = run(
+                    [ 'python', f'{elt_dir}/elt_script.py' ],
+                    capture_output = True,
+                    text = True
+                )
     
-#     if result.returncode != 0:
-#         raise Exception(f'Script failed with error: {result.stderr}')
-#     else:
-#         print(result.stdout)
+    if result.returncode != 0:
+        raise Exception(f'Script failed with error: {result.stderr}')
+    else:
+        print(result.stdout)
 
 
 dag = DAG(
-    'elt_and_dbt',
+    "elt_and_dbt",
     default_args = default_args,
-    description = 'An elt workflow with dbt',
+    description = "An elt workflow with dbt",
     start_date = datetime.now(),
     catchup = False
 )
 
 
-# t1 = PythonOperator(
-#     task_id = 'run_elt_script',
-#     python_callable = run_elt_script,
-#     dag = dag
-# )
-t1 = BashOperator(
+t1 = PythonOperator(
     task_id = 'run_elt_script',
-    bash_command = f'/bin/bash {elt_dir}/start.sh',
-    env = {
-        'ELT_DIR': elt_dir,
-        'HOSTNAME': hostname,
-        'PORT_NO': port_no 
-    },
+    python_callable = run_elt_script,
     dag = dag
 )
+
+# t1 = BashOperator(
+#     task_id = "run_elt_script",
+#     bash_command = "{% raw %}/bin/bash "+ str(elt_dir) +"/start.sh{% endraw %}",
+#     env = {
+#         "ELT_DIR": elt_dir,
+#         "HOSTNAME": hostname,
+#         "PORT_NO": port_no
+#     },
+#     dag = dag
+# )
 
 
 t2 = DockerOperator(
     task_id = 'dbt_run',
     image = 'ghcr.io/dbt-labs/dbt-postgres:1.9.latest',
-    entrypoint = '/bin/sh',
-    command = f"""
-        -c '
-        echo "Installing bash and curl...";
-        apt-get update;
-        apt-get install bash;
-        apt-get install -y curl;
-        echo "Waiting for ELT script to complete...";
-        until curl --silent --fail http://{hostname}:{port_no}; do
-            echo "Still waiting...";
-            sleep 2;
-        done;
-        echo "ELT done. Running DBT...";
-        dbt run --profiles-dir /root --project-dir /dbt --full-refresh;
-        '
-    """,
+    command = [
+        'run',
+        '--profiles-dir', '/root',
+        '--project-dir', '/dbt',
+        '--full-refresh'
+    ],
     auto_remove = True,
     docker_url = 'unix://var/run/docker.sock',
-    network_mode = 'bridge',
+    network_mode = 'elt_elt_network',
     mounts = [
-        Mount(source = './custom_postgres', target = '/dbt', type= 'bind'),
-        Mount(source = '~/.dbt', target = '/root', type = 'bind')
+        Mount(source = '/home/hitam/dataeng/elt/custom_postgres', target = '/dbt', type= 'bind'),
+        Mount(source = '/home/hitam/.dbt', target = '/root', type = 'bind')
     ],
+    mount_tmp_dir = False,
     dag = dag
 )
 
