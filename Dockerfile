@@ -1,3 +1,3 @@
-FROM apache/airflow:2.9.3
+FROM ${AIRFLOW_IMAGE}
 
 RUN pip install apache-airflow-providers-docker
