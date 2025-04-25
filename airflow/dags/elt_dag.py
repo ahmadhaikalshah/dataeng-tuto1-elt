@@ -1,27 +1,22 @@
-from datetime import datetime
 from os import getenv
 from subprocess import run
+from datetime import datetime
 
 from docker.types import Mount
 
 from airflow import DAG
-
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.bash import BashOperator
-
 from airflow.providers.docker.operators.docker import DockerOperator
 
 
 default_args = {
-    'owner': 'airflow',
-    'depends_on_past': False,
-    'email_on_failure': False,
-    'email_on_entry': False
+    'owner'             : 'airflow',
+    'depends_on_past'   : False,
+    'email_on_failure'  : False,
+    'email_on_entry'    : False
 }
 
 
-hostname = getenv('HOSTNAME')
-port_no = getenv('PORT_NO')
 elt_dir = getenv('ELT_DIR')
 
 
@@ -47,25 +42,14 @@ dag = DAG(
 )
 
 
-t1 = PythonOperator(
+task1 = PythonOperator(
     task_id = 'run_elt_script',
     python_callable = run_elt_script,
     dag = dag
 )
 
-# t1 = BashOperator(
-#     task_id = "run_elt_script",
-#     bash_command = "{% raw %}/bin/bash "+ str(elt_dir) +"/start.sh{% endraw %}",
-#     env = {
-#         "ELT_DIR": elt_dir,
-#         "HOSTNAME": hostname,
-#         "PORT_NO": port_no
-#     },
-#     dag = dag
-# )
 
-
-t2 = DockerOperator(
+task2 = DockerOperator(
     task_id = 'dbt_run',
     image = 'ghcr.io/dbt-labs/dbt-postgres:1.9.latest',
     command = [
@@ -86,4 +70,4 @@ t2 = DockerOperator(
 )
 
 
-t1 >> t2
+task1 >> task2

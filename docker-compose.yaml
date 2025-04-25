@@ -1,11 +1,48 @@
+x-common-net: &net
+  networks:
+    - elt_network
+
+x-postgres-common-conf: &pg-common
+  image: postgres:15
+  <<: *net
+
+x-airflow-common-conf: &airflow-common
+  depends_on:
+    - airflow_postgres
+  <<: *net
+  entrypoint: /bin/bash
+
+x-airflow-common-env-var: &airflow-common-env-var
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
+  AIRFLOW__WEBSERVER__SECRET_KEY: secret
+
+x-airflow-common-server-conf: &airflow-common-server
+  build:
+    context: .
+    dockerfile: Dockerfile
+  <<: *airflow-common
+  user: root
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./elt:${ELT_AIRFLOW_DIR}
+    - ./custom_postgres:/opt/dbt
+    - ~/.dbt:/root/.dbt
+    - /var/run/docker.sock:/var/run/docker.sock
+  environment:
+    <<: *airflow-common-env-var
+    AIRFLOW__WEBSERVER__RBAC: "True"
+    ELT_DIR: ${ELT_AIRFLOW_DIR}
+
+
 services:
   
   source_postgres:
-    image: postgres:15
+    <<: *pg-common
     ports:
       - "5433:5432"
-    networks:
-      - elt_network
     environment:
       POSTGRES_DB: source_db
       POSTGRES_USER: postgres
@@ -15,11 +52,9 @@ services:
       - ./source_db_init/init.sql/:/docker-entrypoint-initdb.d/init.sql
 
   destination_postgres:
-    image: postgres:15
+    <<: *pg-common
     ports:
       - "5434:5432"
-    networks:
-      - elt_network
     environment:
       POSTGRES_DB: destination_db
       POSTGRES_USER: postgres
@@ -31,13 +66,12 @@ services:
   #   build:
   #     context: ./elt
   #     dockerfile: Dockerfile
-  #   networks:
-  #     - elt_network
   #   depends_on:
   #     - source_postgres
   #     - destination_postgres
   #   ports:
   #     - "${PORT_NO}:${PORT_NO}"
+  #   <<: *net
   #   environment:
   #     ELT_DIR: ${ELT_DIR}
   #     HOSTNAME: ${ELT_HOSTNAME}
@@ -60,21 +94,18 @@ services:
   #       done;
   #       echo 'ELT done. Running DBT...';
   #       dbt run --profiles-dir /root --project-dir /dbt
-  #   networks:
-  #     - elt_network
   #   volumes:
   #     - ./custom_postgres:/dbt
   #     - ~/.dbt:/root
   #   depends_on:
   #     - ${ELT_HOSTNAME}
+  #   <<: *net
   #   environment:
   #     DBT_PROFILE: custom_postgres
   #     DBT_TARGET: dev
   
   airflow_postgres:
-    image: postgres:15
-    networks:
-      - elt_network
+    <<: *pg-common
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -83,86 +114,23 @@ services:
       - airflow_db_data:/var/lib/postgresql/data
   
   airflow_init:
-    image: apache/airflow:2.9.3
-    depends_on:
-      - airflow_postgres
-    networks:
-      - elt_network
+    image: ${AIRFLOW_IMAGE}
+    <<: *airflow-common
     environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
-      AIRFLOW__WEBSERVER__SECRET_KEY: secret
-    entrypoint: /bin/bash
+      <<: *airflow-common-env-var
     command: >
       -c "airflow db migrate && airflow users create --username airflow --firstname John --lastname Smith --role Admin --email johnsmith@example.com --password password"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
   
   airflow_webserver:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    user: root
-    depends_on:
-      - airflow_postgres
-    networks:
-      - elt_network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./elt:${ELT_AIRFLOW_DIR}
-      - ./custom_postgres:/opt/dbt
-      - ~/.dbt:/root/.dbt
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
-      AIRFLOW__WEBSERVER__SECRET_KEY: secret
-      AIRFLOW__WEBSERVER__RBAC: "True"
-      # _AIRFLOW_WWW_USER_CREATE: "True"
-      # _AIRFLOW_WWW_USER_USERNAME: airflow
-      # _AIRFLOW_WWW_USER_PASSWORD: password
-      # _AIRFLOW_WWW_USER_FIRSTNAME: John
-      # _AIRFLOW_WWW_USER_LASTNAME: Smith
-      # _AIRFLOW_WWW_USER_EMAIL: johnsmith@admin.com
-      ELT_DIR: ${ELT_AIRFLOW_DIR}
-      HOSTNAME: ${ELT_HOSTNAME}
-      PORT_NO: ${PORT_NO}
+    <<: *airflow-common-server
     ports:
       - "8080:8080"
-    entrypoint: /bin/bash
     command: -c "airflow db migrate && airflow webserver"
   
   airflow_scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    user: root
-    depends_on:
-      - airflow_postgres
-    networks:
-      - elt_network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./elt:${ELT_AIRFLOW_DIR}
-      - ./custom_postgres:/opt/dbt
-      - ~/.dbt:/root/.dbt
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow_postgres/airflow
-      AIRFLOW__WEBSERVER__SECRET_KEY: secret
-      AIRFLOW__WEBSERVER__RBAC: "True"
-      # AIRFLOW__API__AUTH_BACKEND: airflow.api.auth.backend.basic_auth
-      # _AIRFLOW_WWW_USER_USERNAME: airflow
-      # _AIRFLOW_WWW_USER_PASSWORD: password
-      ELT_DIR: ${ELT_AIRFLOW_DIR}
-      HOSTNAME: ${ELT_HOSTNAME}
-      PORT_NO: ${PORT_NO}
-    entrypoint: /bin/bash
+    <<: *airflow-common-server
     command: -c "airflow db migrate && airflow scheduler"
 
 networks:
