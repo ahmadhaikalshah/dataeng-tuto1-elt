@@ -114,7 +114,7 @@ services:
       - airflow_db_data:/var/lib/postgresql/data
   
   airflow_init:
-    image: ${AIRFLOW_IMAGE}
+    image: apache/airflow:2.9.2
     <<: *airflow-common
     environment:
       <<: *airflow-common-env-var
