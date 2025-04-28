@@ -36,6 +36,7 @@ x-airflow-common-server-conf: &airflow-common-server
     AIRFLOW__WEBSERVER__RBAC: "True"
     ELT_DIR: ${ELT_AIRFLOW_DIR}
     DBT_PROFILE_DIR: ${DBT_PROFILE_DIR}
+    DBT_PROJECT_DIR: ${DBT_PROJECT_DIR}
 
 
 services:
@@ -78,10 +79,10 @@ services:
   #     [ 
   #       "run", 
   #       "--profiles-dir", "${DBT_PROFILE_DIR}", 
-  #       "--project-dir", "/dbt" 
+  #       "--project-dir", "${DBT_PROJECT_DIR}" 
   #     ]
   #   volumes:
-  #     - ./custom_postgres:/dbt
+  #     - ./custom_postgres:${DBT_PROJECT_DIR}
   #     - /home/hitam/.dbt:${DBT_PROFILE_DIR} # for Linux machine
   #     # - ~/.dbt:${DBT_PROFILE_DIR} # for Windows/MacOS machine
   #   depends_on:
