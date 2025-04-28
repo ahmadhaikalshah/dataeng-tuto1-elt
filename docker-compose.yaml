@@ -29,12 +29,13 @@ x-airflow-common-server-conf: &airflow-common-server
     - ./airflow/dags:/opt/airflow/dags
     - ./elt:${ELT_AIRFLOW_DIR}
     - ./custom_postgres:/opt/dbt
-    - ~/.dbt:/root/.dbt
+    - ~/.dbt:${DBT_PROFILE_DIR}
     - /var/run/docker.sock:/var/run/docker.sock
   environment:
     <<: *airflow-common-env-var
     AIRFLOW__WEBSERVER__RBAC: "True"
     ELT_DIR: ${ELT_AIRFLOW_DIR}
+    DBT_PROFILE_DIR: ${DBT_PROFILE_DIR}
 
 
 services:
@@ -69,36 +70,23 @@ services:
   #   depends_on:
   #     - source_postgres
   #     - destination_postgres
-  #   ports:
-  #     - "${PORT_NO}:${PORT_NO}"
   #   <<: *net
-  #   environment:
-  #     ELT_DIR: ${ELT_DIR}
-  #     HOSTNAME: ${ELT_HOSTNAME}
-  #     PORT_NO: ${PORT_NO}
 
   # dbt:
   #   image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
-  #   entrypoint: /bin/sh
-  #   command:
-  #     - -c
-  #     - |
-  #       echo 'Installing bash and curl...';
-  #       apt-get update;
-  #       apt-get install bash;
-  #       apt-get install -y curl;
-  #       echo 'Waiting for ELT script to complete...';
-  #       until curl --silent --fail http://${ELT_HOSTNAME}:${PORT_NO}; do
-  #         echo 'Still waiting...';
-  #         sleep 2;
-  #       done;
-  #       echo 'ELT done. Running DBT...';
-  #       dbt run --profiles-dir /root --project-dir /dbt
+  #   command: 
+  #     [ 
+  #       "run", 
+  #       "--profiles-dir", "${DBT_PROFILE_DIR}", 
+  #       "--project-dir", "/dbt" 
+  #     ]
   #   volumes:
   #     - ./custom_postgres:/dbt
-  #     - ~/.dbt:/root
+  #     - /home/hitam/.dbt:${DBT_PROFILE_DIR} # for Linux machine
+  #     # - ~/.dbt:${DBT_PROFILE_DIR} # for Windows/MacOS machine
   #   depends_on:
-  #     - ${ELT_HOSTNAME}
+  #     elt_script:
+  #       condition: service_completed_successfully
   #   <<: *net
   #   environment:
   #     DBT_PROFILE: custom_postgres

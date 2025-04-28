@@ -79,3 +79,5 @@ subprocess_env = dict(PGPASSWORD=destination_config['password'])    # Set the PG
 run(load_command, env=subprocess_env, check=True)                   # Execute the load command
 
 print("Ending ELT script...")
+
+exit(0)

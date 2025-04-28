@@ -18,6 +18,7 @@ default_args = {
 
 
 elt_dir = getenv('ELT_DIR')
+dbt_dir = getenv('DBT_PROFILE_DIR')
 
 
 def run_elt_script():
@@ -54,7 +55,7 @@ task2 = DockerOperator(
     image = 'ghcr.io/dbt-labs/dbt-postgres:1.9.latest',
     command = [
         'run',
-        '--profiles-dir', '/root',
+        '--profiles-dir', dbt_dir,
         '--project-dir', '/dbt',
         '--full-refresh'
     ],
@@ -63,7 +64,7 @@ task2 = DockerOperator(
     network_mode = 'elt_elt_network',
     mounts = [
         Mount(source = '/home/hitam/dataeng/elt/custom_postgres', target = '/dbt', type= 'bind'),
-        Mount(source = '/home/hitam/.dbt', target = '/root', type = 'bind')
+        Mount(source = '/home/hitam/.dbt', target = dbt_dir, type = 'bind')
     ],
     mount_tmp_dir = False,
     dag = dag
