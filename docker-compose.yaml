@@ -28,7 +28,7 @@ x-airflow-common-server-conf: &airflow-common-server
   volumes:
     - ./airflow/dags:${CONT_AIRFLOW_DAGS_DIR}
     - ./elt:${CONT_AIRFLOW_ELT_DIR}
-    - ./custom_postgres:/opt/dbt
+    - ./custom_postgres:${CONT_DBT_PROJECT_DIR}
     - ~/.dbt:${CONT_DBT_PROFILE_DIR}
     - /var/run/docker.sock:/var/run/docker.sock
   environment:
