@@ -26,17 +26,19 @@ x-airflow-common-server-conf: &airflow-common-server
   extra_hosts:
     - "host.docker.internal:host-gateway"
   volumes:
-    - ./airflow/dags:/opt/airflow/dags
-    - ./elt:${ELT_AIRFLOW_DIR}
+    - ./airflow/dags:${CONT_AIRFLOW_DAGS_DIR}
+    - ./elt:${CONT_AIRFLOW_ELT_DIR}
     - ./custom_postgres:/opt/dbt
-    - ~/.dbt:${DBT_PROFILE_DIR}
+    - ~/.dbt:${CONT_DBT_PROFILE_DIR}
     - /var/run/docker.sock:/var/run/docker.sock
   environment:
     <<: *airflow-common-env-var
     AIRFLOW__WEBSERVER__RBAC: "True"
-    ELT_DIR: ${ELT_AIRFLOW_DIR}
-    DBT_PROFILE_DIR: ${DBT_PROFILE_DIR}
-    DBT_PROJECT_DIR: ${DBT_PROJECT_DIR}
+    HOST_HOME_DIR: ${HOST_HOME_DIR}
+    HOST_DBT_DIR: ${HOST_PROJ_DIR}/custom_postgres
+    ELT_DIR: ${CONT_AIRFLOW_ELT_DIR}
+    DBT_PROFILE_DIR: ${CONT_DBT_PROFILE_DIR}
+    DBT_PROJECT_DIR: ${CONT_DBT_PROJECT_DIR}
 
 
 services:
@@ -78,13 +80,12 @@ services:
   #   command: 
   #     [ 
   #       "run", 
-  #       "--profiles-dir", "${DBT_PROFILE_DIR}", 
-  #       "--project-dir", "${DBT_PROJECT_DIR}" 
+  #       "--profiles-dir", "${CONT_DBT_PROFILE_DIR}", 
+  #       "--project-dir", "${CONT_DBT_PROJECT_DIR}" 
   #     ]
   #   volumes:
-  #     - ./custom_postgres:${DBT_PROJECT_DIR}
-  #     - /home/hitam/.dbt:${DBT_PROFILE_DIR} # for Linux machine
-  #     # - ~/.dbt:${DBT_PROFILE_DIR} # for Windows/MacOS machine
+  #     - ./custom_postgres:${CONT_DBT_PROJECT_DIR}
+  #     - ${HOST_HOME_DIR}/.dbt:${CONT_DBT_PROFILE_DIR}
   #   depends_on:
   #     elt_script:
   #       condition: service_completed_successfully
@@ -110,7 +111,7 @@ services:
     command: >
       -c "airflow db migrate && airflow users create --username airflow --firstname John --lastname Smith --role Admin --email johnsmith@example.com --password password"
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/dags:${CONT_AIRFLOW_DAGS_DIR}
   
   airflow_webserver:
     <<: *airflow-common-server

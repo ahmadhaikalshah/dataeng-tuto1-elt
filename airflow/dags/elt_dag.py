@@ -9,14 +9,9 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 
-default_args = {
-    'owner'             : 'airflow',
-    'depends_on_past'   : False,
-    'email_on_failure'  : False,
-    'email_on_entry'    : False
-}
 
-
+host_home_dir = getenv('HOST_HOME_DIR')
+host_dbt_dir = getenv('HOST_DBT_DIR')
 elt_dir = getenv('ELT_DIR')
 dbt_profile_dir = getenv('DBT_PROFILE_DIR')
 dbt_project_dir = getenv('DBT_PROJECT_DIR')
@@ -37,7 +32,12 @@ def run_elt_script():
 
 dag = DAG(
     "elt_and_dbt",
-    default_args = default_args,
+    default_args = {
+        'owner'             : 'airflow',
+        'depends_on_past'   : False,
+        'email_on_failure'  : False,
+        'email_on_entry'    : False
+    },
     description = "An elt workflow with dbt",
     start_date = datetime.now(),
     catchup = False
@@ -64,8 +64,8 @@ task2 = DockerOperator(
     docker_url = 'unix://var/run/docker.sock',
     network_mode = 'elt_elt_network',
     mounts = [
-        Mount(source = '/home/hitam/dataeng/elt/custom_postgres', target = dbt_project_dir, type= 'bind'),
-        Mount(source = '/home/hitam/.dbt', target = dbt_profile_dir, type = 'bind')
+        Mount(source = host_dbt_dir, target = dbt_project_dir, type= 'bind'),
+        Mount(source = f'{host_home_dir}/.dbt', target = dbt_profile_dir, type = 'bind')
     ],
     mount_tmp_dir = False,
     dag = dag
